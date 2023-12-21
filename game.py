@@ -1,4 +1,3 @@
- 
 import random
 from constants import DIESIDE, MAX_HEALTH, VICTORY_PTS_WIN, DIE_COUNT, PlayerState
 
@@ -9,15 +8,15 @@ class Game:
         assert len(self.player_strategies) == len(self.players)
         self.winner = -1
         self.current_player_idx = start_idx
-    
+
     @property
     def n_players(self):
         return len(self.players)
-    
+
     @property
     def current_player(self):
         return self.players[self.current_player_idx]
-    
+
     @property
     def other_player_idx(self):
         return (self.current_player_idx + 1) % self.n_players
@@ -32,7 +31,7 @@ class Game:
     def start_turn(self):
         if self.current_player.in_tokyo:
             self.current_player.victory_points += 2
-    
+
     def roll_n_dice(self, n):
         return [random.choice([DIESIDE.ATTACK, DIESIDE.HEAL, DIESIDE.ONE, DIESIDE.TWO, DIESIDE.THREE]) for _ in range(n)]
 
@@ -45,25 +44,24 @@ class Game:
 
     def resolve_victory_point_dice(self, dice):
         for dieside in [DIESIDE.ONE, DIESIDE.TWO, DIESIDE.THREE]:
-          cnt = sum([x == dieside for x in dice])
-          if cnt >= 3:
-            self.current_player.victory_points += int(dieside)
-            self.current_player.victory_points += cnt - 3
+            cnt = sum(x == dieside for x in dice)
+            if cnt >= 3:
+                self.current_player.victory_points += int(dieside) + (cnt - 3)
 
     def resolve_health_dice(self, dice):
-        heals = sum([x == DIESIDE.HEAL for x in dice])
+        heals = sum(x == DIESIDE.HEAL for x in dice)
         if not self.current_player.in_tokyo:
-          self.current_player.health  = min(MAX_HEALTH, self.current_player.health + heals)
+            self.current_player.health  = min(MAX_HEALTH, self.current_player.health + heals)
 
     def resolve_attack_dice(self, dice):
-        attack = sum([x == DIESIDE.ATTACK for x in dice])
+        attack = sum(x == DIESIDE.ATTACK for x in dice)
         if self.current_player.in_tokyo:
-          self.other_player.health  = self.other_player.health - attack
+            self.other_player.health  = self.other_player.health - attack
         elif self.other_player.in_tokyo:
-          self.other_player.health  = self.other_player.health - attack
-          if attack > 0 and self.other_player_yields_tokyo():
-            self.current_player.in_tokyo = True
-            self.other_player.in_tokyo = False
+            self.other_player.health  = self.other_player.health - attack
+            if attack > 0 and self.other_player_yields_tokyo():
+                self.current_player.in_tokyo = True
+                self.other_player.in_tokyo = False
         else:
             self.current_player.in_tokyo = True
             self.current_player.victory_points += 1
@@ -73,7 +71,7 @@ class Game:
         self.resolve_victory_point_dice(dice)
         self.resolve_health_dice(dice)
         self.resolve_attack_dice(dice)
-    
+
     def check_winner(self):
         for i, player in enumerate(self.players):
             if player.health <= 0:
@@ -87,29 +85,29 @@ class Game:
         self.resolve_dice(dice)
         self.check_winner()
         self.current_player_idx = (self.current_player_idx + 1) % self.n_players
-    
+
     def __str__(self):
         return (f'GAME STATE: player {self.tokyo_player_idx} is in tokyo \n' +
-                f'Players 0 has {self.players[0].health} health and {self.players[0].victory_points} victory points \n' +  
+                f'Players 0 has {self.players[0].health} health and {self.players[0].victory_points} victory points \n' +
                 f'Players 1 has {self.players[1].health} health and {self.players[1].victory_points} victory points')
 
 
 if __name__ == '__main__':
-  import importlib
-  import sys
-  if len(sys.argv) != 3:
-    print('Example usage: python game.py random_agent random_agent')
-    sys.exit(1)
-  _, strategy_one, strategy_two =sys.argv
-  module_one = importlib.import_module(strategy_one)
-  module_two = importlib.import_module(strategy_two) 
-  GAMES_N = 100
-  winners = []
-  for i in range(GAMES_N):
-    game = Game(player_strategies=[module_one.PlayerStrategy(), module_two.PlayerStrategy()],
-                start_idx=i%2)
-    while game.winner == -1:
-      game.step()
-    winners.append(game.winner)
-  player_0_wins = sum([x == 0 for x in winners])
-  print(f'{strategy_one} won {player_0_wins}/{GAMES_N} games against {strategy_two}')
+    import sys
+    import importlib
+    if len(sys.argv) != 3:
+        print('Example usage: python game.py random_agent random_agent')
+        sys.exit(1)
+
+    _, strategy_one, strategy_two =sys.argv
+    module_one = importlib.import_module(strategy_one)
+    module_two = importlib.import_module(strategy_two)
+    GAMES_N = 1000
+    winners = []
+    for i in range(GAMES_N):
+        game = Game(player_strategies=[module_one.PlayerStrategy(), module_two.PlayerStrategy()], start_idx=i%2)
+        while game.winner == -1:
+            game.step()
+        winners.append(game.winner)
+    player_0_wins = sum(x == 0 for x in winners)
+    print(f'{strategy_one} won {player_0_wins}/{GAMES_N} games against {strategy_two}')
