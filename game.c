@@ -54,19 +54,18 @@ PlayerStrategy RANDOM_AGENT = (PlayerStrategy){
 int angry_yield_tokyo(PlayerState* me, PlayerState* other) {
     return me->health <= 5;
 }
-
 void angry_keep_dice(PlayerState* me, PlayerState* other, DieSide* dice, int reroll_n, int* keep_mask) {
     int heals = 0;
     int to_heal = MAX_HEALTH - me->health;
     for (int i = 0; i < DIE_COUNT; i++) {
         if (dice[i] == HEAL) {
-	    if (heals < to_heal && !me->in_tokyo) {
-	        keep_mask[i] = 1;
-		heals++;
-	    } else {
-	        keep_mask[i] = 0;
-	    }
-	} else if (dice[i] == ATTACK) {
+            if (heals < to_heal && !me->in_tokyo) {
+                keep_mask[i] = 1;
+                heals++;
+            } else {
+                keep_mask[i] = 0;
+            }
+        } else if (dice[i] == ATTACK) {
             keep_mask[i] = 1;
         } else {
             keep_mask[i] = 0;
@@ -77,6 +76,36 @@ void angry_keep_dice(PlayerState* me, PlayerState* other, DieSide* dice, int rer
 PlayerStrategy ANGRY_AGENT = (PlayerStrategy){
     .yield_tokyo = angry_yield_tokyo,
     .keep_dice = angry_keep_dice
+};
+
+
+// Monte carlo strategy
+
+void step(GameState* game, PlayerStrategy* player_strategies[2]);
+int mc_yield_tokyo(PlayerState *me, PlayerState* other) {
+    PlayerStrategy* strategies[2] = { &RANDOM_AGENT, &RANDOM_AGENT };
+    int wins[2] = { 0, 0 };
+    int n_games = 100;
+
+    for (int action = 0; action < 2; action++) {
+        for (int i = 0; i < n_games; i++) {
+            GameState game = (GameState){ .winner = -1, .current_player_idx = 0 };
+            game.players[0] = (PlayerState){ .health = me->health, .victory_points = me->victory_points, .in_tokyo = action == 0 };
+            game.players[1] = (PlayerState){ .health = other->health, .victory_points = other->victory_points, .in_tokyo = action == 1 };
+
+            while (game.winner == -1) {
+                step(&game, strategies);
+            }
+            wins[action] += game.winner == 0;
+        }
+    }
+
+    return wins[1] >= wins[0];
+}
+
+PlayerStrategy MONTE_CARLO_AGENT = (PlayerStrategy){
+    .yield_tokyo = mc_yield_tokyo,
+    .keep_dice = random_keep_dice,
 };
 
 
@@ -103,18 +132,14 @@ void roll_dice(GameState* game, DieSide dice[DIE_COUNT], PlayerStrategy* strateg
     }
     for (int roll = 0; roll < 2; roll++) {
         PlayerState* me = &game->players[game->current_player_idx];
-	PlayerState* other = &game->players[(game->current_player_idx + 1) % 2];
+        PlayerState* other = &game->players[(game->current_player_idx + 1) % 2];
         strategy->keep_dice(me, other, dice, roll, keep_mask);
-	for (int i = 0; i < DIE_COUNT; i++) {
-	    if (!keep_mask[i]) {
-	        dice[i] = roll_die();
-	    }
-	}
+        for (int i = 0; i < DIE_COUNT; i++) {
+            if (!keep_mask[i]) {
+                dice[i] = roll_die();
+            }
+        }
     }
-}
-
-int other_player_yields_tokyo(GameState* game) {
-    return rand() % 2;
 }
 
 void resolve_victory_point_dice(GameState* game, DieSide dice[DIE_COUNT]) {
@@ -189,11 +214,12 @@ void step(GameState* game, PlayerStrategy* player_strategies[2]) {
 
 int main() {
     srand(time(NULL));
-    int N_GAMES = 1000000;
+    int N_GAMES = 1000;
     int player_one_wins = 0;
     int total_steps = 0;
     float start_time = (float)clock()/CLOCKS_PER_SEC;
-    PlayerStrategy* player_strategies[2] = { &ANGRY_AGENT, &RANDOM_AGENT };
+    PlayerStrategy* player_strategies[2] = { &MONTE_CARLO_AGENT, &RANDOM_AGENT };
+    // PlayerStrategy* player_strategies[2] = { &RANDOM_AGENT, &ANGRY_AGENT };
 
     for (int i = 0; i < N_GAMES; i++) {
         GameState game = (GameState){ .winner = -1, .current_player_idx = i % 2 };
