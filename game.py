@@ -1,11 +1,6 @@
-import ctypes
 import random
 from constants import MAX_HEALTH, VICTORY_PTS_WIN, DIE_COUNT, DieSide, PlayerState, GameState
-
-import os
-os.system('gcc --shared -O2 -o game.so game.c')
-lib = ctypes.CDLL('game.so')
-lib.seed()
+from cgame import step
 
 class Game:
     def __init__(self, player_strategies=[], start_idx=0):
@@ -97,7 +92,7 @@ class Game:
                 self.state.winner = i
 
     def step(self):
-        return lib.step_random(ctypes.pointer(self.state))
+        # return step(self.state)
 
         self.start_turn()
         dice = self.roll_dice()
@@ -121,7 +116,7 @@ if __name__ == '__main__':
     _, strategy_one, strategy_two = sys.argv
     module_one = importlib.import_module(strategy_one)
     module_two = importlib.import_module(strategy_two)
-    GAMES_N = 10000
+    GAMES_N = 1000
     winners = []
     for i in range(GAMES_N):
         game = Game(player_strategies=[module_one.PlayerStrategy(), module_two.PlayerStrategy()], start_idx=i%2)

@@ -175,7 +175,7 @@ void resolve_attack_dice(GameState* game, DieSide dice[DIE_COUNT], PlayerStrateg
         other_player->health -= attack;
     } else if (other_player->in_tokyo) {
         other_player->health -= attack;
-        if (strategy->yield_tokyo(other_player, current_player)) {
+        if (attack > 0 && strategy->yield_tokyo(other_player, current_player)) {
             current_player->in_tokyo = 1;
             other_player->in_tokyo = 0;
         }
@@ -211,9 +211,23 @@ void step(GameState* game, PlayerStrategy* player_strategies[2]) {
     game->current_player_idx = (game->current_player_idx + 1) % 2;
 }
 
+int rollout(GameState* game, PlayerStrategy* player_strategies[2]) {
+    while (game->winner == -1) {
+        step(game, player_strategies);
+    }
+    return game->winner;
+}
+
+
+// Placeholder functions for the random agent
 void step_random(GameState* game) {
     PlayerStrategy* strategies[2] = { &RANDOM_AGENT, &RANDOM_AGENT };
     step(game, strategies);
+}
+
+int rollout_random(GameState* game) {
+    PlayerStrategy* strategies[2] = { &RANDOM_AGENT, &RANDOM_AGENT };
+    return rollout(game, strategies);
 }
 
 void seed() {
@@ -223,12 +237,12 @@ void seed() {
 
 int main() {
     seed();
-    int N_GAMES = 100000;
+    int N_GAMES = 1000;
     int player_one_wins = 0;
     int total_steps = 0;
     float start_time = (float)clock()/CLOCKS_PER_SEC;
-    PlayerStrategy* player_strategies[2] = { &RANDOM_AGENT, &RANDOM_AGENT };
-    // PlayerStrategy* player_strategies[2] = { &MONTE_CARLO_AGENT, &RANDOM_AGENT };
+    // PlayerStrategy* player_strategies[2] = { &RANDOM_AGENT, &RANDOM_AGENT };
+    PlayerStrategy* player_strategies[2] = { &MONTE_CARLO_AGENT, &RANDOM_AGENT };
     // PlayerStrategy* player_strategies[2] = { &RANDOM_AGENT, &ANGRY_AGENT };
 
     for (int i = 0; i < N_GAMES; i++) {
