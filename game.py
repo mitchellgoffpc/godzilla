@@ -1,13 +1,30 @@
+import ctypes
 import random
-from constants import DIESIDE, MAX_HEALTH, VICTORY_PTS_WIN, DIE_COUNT, PlayerState
+from constants import MAX_HEALTH, VICTORY_PTS_WIN, DIE_COUNT, DieSide, PlayerState, GameState
+
+import os
+os.system('gcc --shared -O2 -o game.so game.c')
+lib = ctypes.CDLL('game.so')
+lib.seed()
 
 class Game:
     def __init__(self, player_strategies=[], start_idx=0):
-        self.players = [PlayerState() for _ in range(2)]
+        players = [PlayerState(10, 0, 0) for _ in range(2)]
+        self.state = GameState((PlayerState * 2)(*players), -1, start_idx)
         self.player_strategies = player_strategies
         assert len(self.player_strategies) == len(self.players)
-        self.winner = -1
-        self.current_player_idx = start_idx
+
+    @property
+    def players(self):
+        return self.state.players
+
+    @property
+    def winner(self):
+        return self.state.winner
+
+    @property
+    def current_player_idx(self):
+        return self.state.current_player_idx
 
     @property
     def n_players(self):
@@ -33,7 +50,7 @@ class Game:
             self.current_player.victory_points += 2
 
     def roll_n_dice(self, n):
-        return [random.choice([DIESIDE.ATTACK, DIESIDE.HEAL, DIESIDE.ONE, DIESIDE.TWO, DIESIDE.THREE]) for _ in range(n)]
+        return [random.choice([DieSide.ATTACK, DieSide.HEAL, DieSide.ONE, DieSide.TWO, DieSide.THREE]) for _ in range(n)]
 
     def roll_dice(self):
         dice_results = self.roll_n_dice(DIE_COUNT)
@@ -43,18 +60,18 @@ class Game:
         return dice_results
 
     def resolve_victory_point_dice(self, dice):
-        for dieside in [DIESIDE.ONE, DIESIDE.TWO, DIESIDE.THREE]:
+        for dieside in [DieSide.ONE, DieSide.TWO, DieSide.THREE]:
             cnt = sum(x == dieside for x in dice)
             if cnt >= 3:
                 self.current_player.victory_points += int(dieside) + (cnt - 3)
 
     def resolve_health_dice(self, dice):
-        heals = sum(x == DIESIDE.HEAL for x in dice)
+        heals = sum(x == DieSide.HEAL for x in dice)
         if not self.current_player.in_tokyo:
             self.current_player.health  = min(MAX_HEALTH, self.current_player.health + heals)
 
     def resolve_attack_dice(self, dice):
-        attack = sum(x == DIESIDE.ATTACK for x in dice)
+        attack = sum(x == DieSide.ATTACK for x in dice)
         if self.current_player.in_tokyo:
             self.other_player.health  = self.other_player.health - attack
         elif self.other_player.in_tokyo:
@@ -75,16 +92,18 @@ class Game:
     def check_winner(self):
         for i, player in enumerate(self.players):
             if player.health <= 0:
-                self.winner = (i + 1) % self.n_players
+                self.state.winner = (i + 1) % self.n_players
             if player.victory_points >= VICTORY_PTS_WIN:
-                self.winner = i
+                self.state.winner = i
 
     def step(self):
+        return lib.step_random(ctypes.pointer(self.state))
+
         self.start_turn()
         dice = self.roll_dice()
         self.resolve_dice(dice)
         self.check_winner()
-        self.current_player_idx = (self.current_player_idx + 1) % self.n_players
+        self.state.current_player_idx = (self.state.current_player_idx + 1) % self.n_players
 
     def __str__(self):
         return (f'GAME STATE: player {self.tokyo_player_idx} is in tokyo \n' +
@@ -99,10 +118,10 @@ if __name__ == '__main__':
         print('Example usage: python game.py random_agent random_agent')
         sys.exit(1)
 
-    _, strategy_one, strategy_two =sys.argv
+    _, strategy_one, strategy_two = sys.argv
     module_one = importlib.import_module(strategy_one)
     module_two = importlib.import_module(strategy_two)
-    GAMES_N = 1000
+    GAMES_N = 10000
     winners = []
     for i in range(GAMES_N):
         game = Game(player_strategies=[module_one.PlayerStrategy(), module_two.PlayerStrategy()], start_idx=i%2)

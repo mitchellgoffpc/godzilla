@@ -6,7 +6,7 @@ int MAX_HEALTH = 10;
 int VICTORY_PTS_WIN = 20;
 int DIE_COUNT = 6;
 
-typedef enum {
+typedef enum DieSide {
     ATTACK,
     HEAL,
     ONE,
@@ -211,14 +211,24 @@ void step(GameState* game, PlayerStrategy* player_strategies[2]) {
     game->current_player_idx = (game->current_player_idx + 1) % 2;
 }
 
+void step_random(GameState* game) {
+    PlayerStrategy* strategies[2] = { &RANDOM_AGENT, &RANDOM_AGENT };
+    step(game, strategies);
+}
+
+void seed() {
+    srand(time(NULL));
+}
+
 
 int main() {
-    srand(time(NULL));
-    int N_GAMES = 1000;
+    seed();
+    int N_GAMES = 100000;
     int player_one_wins = 0;
     int total_steps = 0;
     float start_time = (float)clock()/CLOCKS_PER_SEC;
-    PlayerStrategy* player_strategies[2] = { &MONTE_CARLO_AGENT, &RANDOM_AGENT };
+    PlayerStrategy* player_strategies[2] = { &RANDOM_AGENT, &RANDOM_AGENT };
+    // PlayerStrategy* player_strategies[2] = { &MONTE_CARLO_AGENT, &RANDOM_AGENT };
     // PlayerStrategy* player_strategies[2] = { &RANDOM_AGENT, &ANGRY_AGENT };
 
     for (int i = 0; i < N_GAMES; i++) {
