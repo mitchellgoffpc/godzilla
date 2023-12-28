@@ -230,6 +230,10 @@ int rollout_random(GameState* game) {
     return rollout(game, strategies);
 }
 
+void resolve_dice_random(GameState* game, DieSide dice[DIE_COUNT]) {
+    resolve_dice(game, dice, &RANDOM_AGENT);
+}
+
 void seed() {
     srand(time(NULL));
 }

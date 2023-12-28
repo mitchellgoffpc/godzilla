@@ -45,7 +45,7 @@ class Game:
             self.current_player.victory_points += 2
 
     def roll_n_dice(self, n):
-        return [random.choice([DieSide.ATTACK, DieSide.HEAL, DieSide.ONE, DieSide.TWO, DieSide.THREE]) for _ in range(n)]
+        return random.choices(list(DieSide), k=n)
 
     def roll_dice(self):
         dice_results = self.roll_n_dice(DIE_COUNT)
@@ -58,7 +58,7 @@ class Game:
         for dieside in [DieSide.ONE, DieSide.TWO, DieSide.THREE]:
             cnt = sum(x == dieside for x in dice)
             if cnt >= 3:
-                self.current_player.victory_points += int(dieside) + (cnt - 3)
+                self.current_player.victory_points += int(dieside.value) + (cnt - 3)
 
     def resolve_health_dice(self, dice):
         heals = sum(x == DieSide.HEAL for x in dice)
@@ -77,7 +77,6 @@ class Game:
         else:
             self.current_player.in_tokyo = True
             self.current_player.victory_points += 1
-
 
     def resolve_dice(self, dice):
         self.resolve_victory_point_dice(dice)
@@ -116,7 +115,7 @@ if __name__ == '__main__':
     _, strategy_one, strategy_two = sys.argv
     module_one = importlib.import_module(strategy_one)
     module_two = importlib.import_module(strategy_two)
-    GAMES_N = 1000
+    GAMES_N = 100
     winners = []
     for i in range(GAMES_N):
         game = Game(player_strategies=[module_one.PlayerStrategy(), module_two.PlayerStrategy()], start_idx=i%2)

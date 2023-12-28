@@ -1,10 +1,11 @@
 import ctypes
+from enum import Enum
 
 MAX_HEALTH = 10
 VICTORY_PTS_WIN = 20
 DIE_COUNT = 6
 
-class DieSide:
+class DieSide(Enum):
     ATTACK = 'Attack'
     HEAL = 'Heal'
     ONE = '1'

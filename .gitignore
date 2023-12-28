@@ -3,4 +3,4 @@ __pycache__/
 
 # executables
 game
-game.so
+libgame.so
